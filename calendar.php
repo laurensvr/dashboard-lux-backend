@@ -60,9 +60,19 @@ function filter($array, $whitelist) {
 }
 
 $afspraken = $service->events->listEvents(CALENDARS_IDS[0], $optParams);  // Elegant Works
+
+
+$optParams = [
+    'timeMin' => (new DateTime())->format(\DateTime::RFC3339), 
+    'timeMax' => (new DateTime('+1 week'))->format(\DateTime::RFC3339), 
+    'showDeleted' => false,
+    'orderBy' => 'startTime',
+    'singleEvents' => 'true',
+  ];
 $schedule = $service->events->listEvents(CALENDARS_IDS[1], $optParams);  // Personal Schedule
 $return = array();
 $return['cal1'] = filter($afspraken->getItems(), $whitelist);
 $return['cal2'] = filter($schedule->getItems(), $whitelist);
 
+header("Content-type: application/json; charset=utf-8");
 echo json_encode($return);

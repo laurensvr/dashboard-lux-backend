@@ -101,4 +101,5 @@ $return['currentStartTime'] = $currentStartTime;
 // print_r($return);
 // echo "</pre>";
 
+header("Content-type: application/json; charset=utf-8");
 echo json_encode($return);
