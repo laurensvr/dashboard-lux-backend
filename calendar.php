@@ -10,8 +10,6 @@ $client = new Google_Client();
 # 1. Elegant Works ID=
 # 2. Personal Schedule ID=
 
-
-
 ## 1. Create api instance
 $client = new Google\Client();
 
@@ -47,12 +45,29 @@ $whitelist = array(
     'summary',
     'start',
     'end',
+    'duration',
 );
 
 function filter($array, $whitelist) {
+    
     foreach($array as $key => $value) {
         $value = (array) $value;
         if(is_array($value)) {
+            if(isset($value['start']) && isset($value['end'])){
+               
+                if(isset($value['start']['dateTime']) && isset($value['end']['dateTime'])){
+                    #calculate duration
+                    $start = new DateTime($value['start']['dateTime']);
+                    $end = new DateTime($value['end']['dateTime']);
+                    $interval = $start->diff($end);
+                    $value['duration'] = $interval->format('%H:%I');
+                    $value['start']['date'] = $start->format('d-m-Y');
+                    $value['start']['hours'] = $start->format('H:i');
+                    $value['end']['date'] = $end->format('d-m-Y');
+                    $value['end']['hours'] = $end->format('H:i');
+                    
+                }
+            }
             $array[$key] = array_intersect_key($value, array_flip($whitelist));
         }
     }
@@ -64,15 +79,17 @@ $afspraken = $service->events->listEvents(CALENDARS_IDS[0], $optParams);  // Ele
 
 $optParams = [
     'timeMin' => (new DateTime())->format(\DateTime::RFC3339), 
-    'timeMax' => (new DateTime('+1 week'))->format(\DateTime::RFC3339), 
+    'timeMax' => (new DateTime('+2 day'))->format(\DateTime::RFC3339), 
     'showDeleted' => false,
     'orderBy' => 'startTime',
     'singleEvents' => 'true',
   ];
+  
 $schedule = $service->events->listEvents(CALENDARS_IDS[1], $optParams);  // Personal Schedule
 $return = array();
 $return['cal1'] = filter($afspraken->getItems(), $whitelist);
 $return['cal2'] = filter($schedule->getItems(), $whitelist);
 
+header('Access-Control-Allow-Origin: *');
 header("Content-type: application/json; charset=utf-8");
 echo json_encode($return);

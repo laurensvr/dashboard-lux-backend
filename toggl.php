@@ -24,18 +24,18 @@ $projects = curl_exec($curl);
 
 curl_close($curl);
 
-$projects =  json_decode($projects, false);
+$projects =  json_decode($projects, true);
 $return = array();
 // echo "<pre>";
 // print_r($projects);
 // echo "</pre>";
 $projectNames = array();
 foreach($projects as $project){
-    $projectNames[$project->id] = $project->name;
-    $return[$project->id] = array();
-    $return[$project->id]['name'] = $project->name;
-    $return[$project->id]['id'] = $project->id;
-    $return[$project->id]['summarySeconds'] = 0;
+    $projectNames[$project['id']] = $project['name'];
+    $return[$project['id']] = array();
+    $return[$project['id']]['name'] = $project['name'];
+    $return[$project['id']]['id'] = $project['id'];
+    $return[$project['id']]['summarySeconds'] = 0;
 }
 
 // print_r($projectNames);
@@ -60,20 +60,20 @@ curl_setopt_array($curl, array(
 ));
 
 $events = curl_exec($curl);
-$events =  json_decode($events, false);
+$events =  json_decode($events, true);
 $currentEvent = null;
 
 curl_close($curl);
 
 foreach($events as $event){
-    if(!isset($event->pid)) continue;
-    $event->project = $return[$event->pid]['name'];
-    if($event->duration < 0) {
-        $currentProject = $return[$event->pid]['name'];
-        $currentDescription = $event->description;
-        $currentStartTime = $event->start;
+    if(!isset($event['pid'])) continue;
+    $event['project'] = $return[$event['pid']]['name'];
+    if($event['duration'] < 0) {
+        $currentProject = $return[$event['pid']]['name'];
+        $currentDescription = $event['description'];
+        $currentStartTime = $event['start'];
     } else {
-        $return[$event->pid]['summarySeconds'] += $event->duration;
+        $return[$event['pid']]['summarySeconds'] += $event['duration'];
     }
     
 }
@@ -81,25 +81,38 @@ foreach($events as $event){
 function secondsToTime($seconds) {
     $dtF = new \DateTime('@0');
     $dtT = new \DateTime("@$seconds");
-    return $dtF->diff($dtT)->format('%a days, %h hours, %i minutes and %s seconds');
+    $hours = $dtF->diff($dtT)->h;    
+    $hours += $dtF->diff($dtT)->days*24;
+    $minutes = $dtF->diff($dtT)->i;   
+
+    return "$hours hours $minutes minutes";
 }
+$return_array = array();
 foreach($projects as $project){
-    if($return[$project->id]['summarySeconds'] == 0) 
-    ## Remove project->id from array
-    unset($return[$project->id]);
+    if($return[$project['id']]['summarySeconds'] == 0) 
+    ## Remove project['id'] from array
+    unset($return[$project['id']]);
     else{ 
-        $return[$project->id]['summaryReadable'] = secondsToTime($return[$project->id]['summarySeconds']);
+        
+        $return[$project['id']]['summaryReadable'] = secondsToTime($return[$project['id']]['summarySeconds']);
+        array_push($return_array, $return[$project['id']]);
     }
 }
 
+if(isset($currentProject)){
+    $start = new DateTime($currentStartTime);
+    $start->modify('+1 hour');
+    $current['currentProject'] = $currentProject;
+    $current['currentDescription'] = $currentDescription;
+    $current['currentStartTime'] = $start->format('H:i:s');;
+} else {
+    $currentProject = null;
+}
 
 
-$return['currentProject'] = $currentProject;
-$return['currentDescription'] = $currentDescription;
-$return['currentStartTime'] = $currentStartTime;
-// echo "<pre>";
-// print_r($return);
-// echo "</pre>";
 
+
+
+header('Access-Control-Allow-Origin: *');
 header("Content-type: application/json; charset=utf-8");
-echo json_encode($return);
+echo json_encode(array($return_array, $current));
